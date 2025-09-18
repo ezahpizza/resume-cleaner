@@ -229,23 +229,46 @@ const Dashboard = ({ user, onLogout }) => {
     }
   };
 
+  // Enhanced drag and drop handlers
   const handleDragOver = (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    setDragOver(true);
+  };
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     setDragOver(true);
   };
 
   const handleDragLeave = (e) => {
     e.preventDefault();
-    setDragOver(false);
+    e.stopPropagation();
+    // Only remove drag state if leaving the drop zone entirely
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragOver(false);
+    }
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragOver(false);
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      handleFileUpload(files[0]);
+    
+    const files = Array.from(e.dataTransfer.files);
+    
+    if (files.length === 0) {
+      toast.error('No files were dropped');
+      return;
     }
+    
+    if (files.length > 1) {
+      toast.error('Please upload only one file at a time');
+      return;
+    }
+    
+    handleFileUpload(files[0]);
   };
 
   const formatDate = (dateString) => {
