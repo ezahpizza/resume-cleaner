@@ -454,7 +454,7 @@ const Dashboard = ({ user, onLogout }) => {
                         onClick={() => handleViewResume(resume.id)}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium text-gray-900 truncate">
+                          <h4 className="font-medium text-gray-900 truncate flex-1 mr-2">
                             {resume.original_filename}
                           </h4>
                           <Badge variant={resume.cleaned_text ? "default" : "secondary"}>
@@ -466,9 +466,26 @@ const Dashboard = ({ user, onLogout }) => {
                             {resume.cleaned_text ? 'Cleaned' : 'Original'}
                           </Badge>
                         </div>
-                        <p className="text-xs text-gray-500 mb-3">
-                          {formatDate(resume.created_at)}
-                        </p>
+                        
+                        {/* Enhanced metadata display */}
+                        <div className="space-y-1 mb-3">
+                          <p className="text-xs text-gray-500">
+                            {formatDate(resume.created_at)}
+                          </p>
+                          {resume.file_size && (
+                            <p className="text-xs text-gray-500">
+                              {formatFileSize(resume.file_size)}
+                              {resume.extraction_metadata?.word_count && (
+                                <span> • {resume.extraction_metadata.word_count} words</span>
+                              )}
+                            </p>
+                          )}
+                          {resume.extraction_metadata?.page_count && (
+                            <p className="text-xs text-gray-500">
+                              {resume.extraction_metadata.page_count} page{resume.extraction_metadata.page_count !== 1 ? 's' : ''}
+                            </p>
+                          )}
+                        </div>
                         <div className="flex space-x-2">
                           <Button
                             size="sm"
