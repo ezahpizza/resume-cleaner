@@ -334,21 +334,53 @@ const Dashboard = ({ user, onLogout }) => {
                 <div
                   className={`file-upload-area p-8 text-center transition-all duration-300 ${
                     dragOver ? 'drag-over' : ''
-                  }`}
+                  } ${uploadLoading ? 'pointer-events-none' : ''}`}
                   onDragOver={handleDragOver}
+                  onDragEnter={handleDragEnter}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                 >
                   {uploadLoading ? (
                     <div className="flex flex-col items-center space-y-4">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                      <p className="text-gray-600">Uploading and processing...</p>
+                      <div className="relative">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-xs font-semibold text-blue-600">
+                            {uploadProgress}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-gray-600 font-medium">
+                          {uploadProgress < 50 ? 'Uploading...' : 'Processing document...'}
+                        </p>
+                        {uploadedFileInfo && (
+                          <div className="mt-2 text-sm text-gray-500">
+                            <p>{uploadedFileInfo.name}</p>
+                            <p>{(uploadedFileInfo.size / 1024 / 1024).toFixed(1)} MB</p>
+                          </div>
+                        )}
+                      </div>
+                      {/* Progress bar */}
+                      <div className="w-full max-w-xs bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${uploadProgress}%` }}
+                        ></div>
+                      </div>
                     </div>
                   ) : (
                     <>
-                      <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600 mb-4">
-                        Drag and drop your resume here, or click to browse
+                      <FileText className={`w-12 h-12 mx-auto mb-4 transition-colors duration-300 ${
+                        dragOver ? 'text-blue-600' : 'text-gray-400'
+                      }`} />
+                      <p className={`mb-4 transition-colors duration-300 ${
+                        dragOver ? 'text-blue-600 font-medium' : 'text-gray-600'
+                      }`}>
+                        {dragOver 
+                          ? 'Drop your resume here to upload' 
+                          : 'Drag and drop your resume here, or click to browse'
+                        }
                       </p>
                       <input
                         type="file"
@@ -356,15 +388,20 @@ const Dashboard = ({ user, onLogout }) => {
                         onChange={(e) => handleFileUpload(e.target.files[0])}
                         className="hidden"
                         id="file-upload"
+                        disabled={uploadLoading}
                       />
                       <label htmlFor="file-upload">
-                        <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white cursor-pointer">
+                        <Button 
+                          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white cursor-pointer disabled:opacity-50"
+                          disabled={uploadLoading}
+                        >
                           Choose File
                         </Button>
                       </label>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Supports PDF and DOCX files up to 10MB
-                      </p>
+                      <div className="mt-4 text-xs text-gray-500 space-y-1">
+                        <p>Supports PDF and DOCX files up to 10MB</p>
+                        <p>✓ Secure processing • ✓ No content stored permanently</p>
+                      </div>
                     </>
                   )}
                 </div>
