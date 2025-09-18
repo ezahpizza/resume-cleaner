@@ -45,15 +45,69 @@ const Dashboard = ({ user, onLogout }) => {
     }
   };
 
+  // Enhanced file validation
+  const validateFile = (file) => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    const allowedExtensions = ['.pdf', '.docx'];
+
+    // Check file type
+    if (!allowedTypes.includes(file.type)) {
+      return {
+        isValid: false,
+        error: 'Only PDF and DOCX files are supported. Please select a valid file.'
+      };
+    }
+
+    // Check file extension
+    const extension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+    if (!allowedExtensions.includes(extension)) {
+      return {
+        isValid: false,
+        error: `Invalid file extension: ${extension}. Only .pdf and .docx files are allowed.`
+      };
+    }
+
+    // Check file size
+    if (file.size > maxSize) {
+      return {
+        isValid: false,
+        error: `File size (${(file.size / 1024 / 1024).toFixed(1)}MB) exceeds the maximum limit of 10MB.`
+      };
+    }
+
+    // Check if file is empty
+    if (file.size === 0) {
+      return {
+        isValid: false,
+        error: 'The selected file is empty. Please choose a valid resume file.'
+      };
+    }
+
+    return { isValid: true };
+  };
+
   const handleFileUpload = async (file) => {
     if (!file) return;
 
-    if (!['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type)) {
-      toast.error('Only PDF and DOCX files are supported');
+    // Validate file
+    const validation = validateFile(file);
+    if (!validation.isValid) {
+      toast.error(validation.error);
       return;
     }
 
     setUploadLoading(true);
+    setUploadProgress(0);
+    setUploadedFileInfo({
+      name: file.name,
+      size: file.size,
+      type: file.type
+    });
+
     const formData = new FormData();
     formData.append('file', file);
 
@@ -62,23 +116,61 @@ const Dashboard = ({ user, onLogout }) => {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          setUploadProgress(percentCompleted);
+        },
       });
 
-      toast.success('Resume uploaded successfully!');
+      toast.success(
+        `Resume uploaded successfully! ${response.data.word_count} words extracted.`
+      );
+      
       await fetchResumes();
       
-      // Set the uploaded resume as current
+      // Set the uploaded resume as current with enhanced data
       const newResume = {
         id: response.data.resume_id,
         original_filename: file.name,
         original_text: response.data.original_text,
-        cleaned_text: null
+        cleaned_text: null,
+        file_size: response.data.file_size,
+        word_count: response.data.word_count,
+        character_count: response.data.character_count,
+        file_type: response.data.file_type
       };
       setCurrentResume(newResume);
+      
+      // Show file info toast
+      toast.success(
+        `Processing complete: ${response.data.word_count} words, ${response.data.character_count} characters extracted`
+      );
+      
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Upload failed');
+      console.error('Upload error:', error);
+      
+      // Enhanced error handling
+      let errorMessage = 'Upload failed. Please try again.';
+      
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.response?.status === 413) {
+        errorMessage = 'File too large. Please choose a file smaller than 10MB.';
+      } else if (error.response?.status === 415) {
+        errorMessage = 'Unsupported file type. Please upload a PDF or DOCX file.';
+      } else if (error.response?.status === 409) {
+        errorMessage = 'This resume has already been uploaded. Please select a different file.';
+      } else if (error.code === 'NETWORK_ERROR') {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setUploadLoading(false);
+      setUploadProgress(0);
+      setUploadedFileInfo(null);
     }
   };
 
