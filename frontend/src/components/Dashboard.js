@@ -29,6 +29,8 @@ const Dashboard = ({ user, onLogout }) => {
   const [uploadLoading, setUploadLoading] = useState(false);
   const [cleaningLoading, setCleaningLoading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadedFileInfo, setUploadedFileInfo] = useState(null);
 
   useEffect(() => {
     fetchResumes();
