@@ -1,4 +1,10 @@
 export const validateResumeFile = (file) => {
+  console.log('validateResumeFile called with:', {
+    name: file.name,
+    size: file.size,
+    type: file.type
+  });
+
   const maxSize = 10 * 1024 * 1024; // 10MB
   const allowedTypes = {
     'application/pdf': { name: 'PDF', extension: '.pdf' },
@@ -83,6 +89,7 @@ export const validateResumeFile = (file) => {
     warnings
   };
 
+  console.log('validateResumeFile result:', validationResult);
   return validationResult;
 };
 

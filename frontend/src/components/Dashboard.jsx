@@ -13,17 +13,21 @@ import {
   CheckCircle, 
   Clock,
   RefreshCw,
-  XCircle
+  XCircle,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { useResume } from '../hooks/useResume';
 import { formatFileSize, formatDate } from '../lib/formatters';
 import { toast } from 'sonner';
 import FileUploadValidation from './FileUploadValidation';
+import { resumeService } from '../services/resumeService';
 
 const Dashboard = () => {
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [validationResult, setValidationResult] = useState(null);
+  const [backendConnected, setBackendConnected] = useState(null);
   const {
     resumes,
     currentResume,
@@ -40,10 +44,24 @@ const Dashboard = () => {
     setCurrentResume
   } = useResume();
 
+  // Check backend connection on mount
+  React.useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        await resumeService.healthCheck();
+        setBackendConnected(true);
+      } catch (error) {
+        setBackendConnected(false);
+      }
+    };
+    checkConnection();
+  }, []);
+
   const handleFileSelect = (file) => {
     if (file) {
+      console.log('File selected:', file.name, file.size, file.type);
       setSelectedFile(file);
-      // Clear the file input so the same file can be selected again
+      // Clear the file input immediately after selection to allow re-selection
       const fileInput = document.getElementById('file-upload');
       if (fileInput) {
         fileInput.value = '';
@@ -52,11 +70,30 @@ const Dashboard = () => {
   };
 
   const handleFileUpload = async (file) => {
-    if (!file) return;
-    await uploadResume(file);
-    // Clear selection after upload
-    setSelectedFile(null);
-    setValidationResult(null);
+    if (!file) {
+      console.error('No file provided to handleFileUpload');
+      return;
+    }
+
+    console.log('Starting upload for file:', file.name);
+
+    try {
+      await uploadResume(file);
+      console.log('Upload completed successfully');
+
+      // Clear selection after successful upload
+      setSelectedFile(null);
+      setValidationResult(null);
+
+      // Clear the file input after successful upload
+      const fileInput = document.getElementById('file-upload');
+      if (fileInput) {
+        fileInput.value = '';
+      }
+    } catch (error) {
+      console.error('Upload failed:', error);
+      // Don't clear the file on error so user can retry
+    }
   };
 
   const handleCleanResume = async (resumeId) => {
@@ -73,32 +110,42 @@ const Dashboard = () => {
 
   // Enhanced drag and drop handlers
   const handleDragOver = (e) => {
+    if (backendConnected === false) return;
     e.preventDefault();
     e.stopPropagation();
+    console.log('Drag over detected');
     setDragOver(true);
   };
 
   const handleDragEnter = (e) => {
+    if (backendConnected === false) return;
     e.preventDefault();
     e.stopPropagation();
+    console.log('Drag enter detected');
     setDragOver(true);
   };
 
   const handleDragLeave = (e) => {
+    if (backendConnected === false) return;
     e.preventDefault();
     e.stopPropagation();
+    console.log('Drag leave detected');
     // Only remove drag state if leaving the drop zone entirely
     if (!e.currentTarget.contains(e.relatedTarget)) {
+      console.log('Leaving drop zone entirely');
       setDragOver(false);
     }
   };
 
   const handleDrop = (e) => {
+    if (backendConnected === false) return;
     e.preventDefault();
     e.stopPropagation();
+    console.log('Drop detected');
     setDragOver(false);
     
     const files = Array.from(e.dataTransfer.files);
+    console.log('Dropped files:', files);
     
     if (files.length === 0) {
       toast.error('No files were dropped');
@@ -131,9 +178,25 @@ const Dashboard = () => {
             </div>
             
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                Resume Cleaner
-              </h1>
+              {/* Connection Status */}
+              <div className="flex items-center space-x-2">
+                {backendConnected === null ? (
+                  <div className="flex items-center space-x-1 text-gray-500">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+                    <span className="text-sm">Checking...</span>
+                  </div>
+                ) : backendConnected ? (
+                  <div className="flex items-center space-x-1 text-green-600">
+                    <Wifi className="w-4 h-4" />
+                    <span className="text-sm">Connected</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-1 text-red-600">
+                    <WifiOff className="w-4 h-4" />
+                    <span className="text-sm">Disconnected</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -153,12 +216,22 @@ const Dashboard = () => {
                 <CardDescription>
                   Upload your PDF or DOCX resume to get started
                 </CardDescription>
+                {backendConnected === false && (
+                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <XCircle className="w-4 h-4 text-red-600" />
+                      <span className="text-sm text-red-800">
+                        Backend server is not running. Please start the backend server on port 8000.
+                      </span>
+                    </div>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 <div
                   className={`file-upload-area p-8 text-center transition-all duration-300 ${
                     dragOver ? 'drag-over' : ''
-                  } ${uploadLoading ? 'pointer-events-none' : ''}`}
+                  } ${(uploadLoading || backendConnected === false) ? 'pointer-events-none opacity-50' : ''}`}
                   onDragOver={handleDragOver}
                   onDragEnter={handleDragEnter}
                   onDragLeave={handleDragLeave}
@@ -209,15 +282,20 @@ const Dashboard = () => {
                       <input
                         type="file"
                         accept=".pdf,.docx"
-                        onChange={(e) => handleFileSelect(e.target.files[0])}
+                        onChange={(e) => {
+                          console.log('File input changed:', e.target.files);
+                          if (e.target.files && e.target.files.length > 0) {
+                            handleFileSelect(e.target.files[0]);
+                          }
+                        }}
                         className="hidden"
                         id="file-upload"
-                        disabled={uploadLoading}
+                        disabled={uploadLoading || backendConnected === false}
                       />
                       <label htmlFor="file-upload">
                         <Button 
                           className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white cursor-pointer disabled:opacity-50"
-                          disabled={uploadLoading}
+                          disabled={uploadLoading || backendConnected === false}
                         >
                           Choose File
                         </Button>
@@ -246,8 +324,17 @@ const Dashboard = () => {
                           </div>
                           <FileUploadValidation 
                             file={selectedFile} 
-                            onValidationComplete={setValidationResult}
+                            onValidationComplete={(result) => {
+                              console.log('Validation complete:', result);
+                              setValidationResult(result);
+                            }}
                           />
+                          {validationResult && (
+                            <div className="mt-2 text-xs">
+                              Validation: {validationResult.isValid ? 'Valid' : 'Invalid'}
+                              {validationResult.issues?.length > 0 && ` (${validationResult.issues.length} issues)`}
+                            </div>
+                          )}
                           {validationResult?.isValid && (
                             <div className="mt-4">
                               <Button

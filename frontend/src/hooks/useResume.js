@@ -22,7 +22,11 @@ export const useResume = () => {
       const data = await resumeService.getResumes();
       setResumes(data);
     } catch (error) {
-      toast.error('Failed to fetch resumes');
+      console.error('Error fetching resumes:', error);
+      const errorMessage = error.message?.includes('connect to server')
+        ? 'Backend server is not running. Please start the backend server first.'
+        : 'Failed to fetch resumes. Please check your connection.';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -86,7 +90,9 @@ export const useResume = () => {
       // Enhanced error handling
       let errorMessage = 'Upload failed. Please try again.';
 
-      if (error.response?.data?.detail) {
+      if (error.message?.includes('connect to server')) {
+        errorMessage = 'Backend server is not running. Please start the backend server on port 8000.';
+      } else if (error.response?.data?.detail) {
         errorMessage = error.response.data.detail;
       } else if (error.response?.status === 413) {
         errorMessage = 'File too large. Please choose a file smaller than 10MB.';
@@ -94,8 +100,10 @@ export const useResume = () => {
         errorMessage = 'Unsupported file type. Please upload a PDF or DOCX file.';
       } else if (error.response?.status === 409) {
         errorMessage = 'This resume has already been uploaded. Please select a different file.';
-      } else if (error.code === 'NETWORK_ERROR') {
-        errorMessage = 'Network error. Please check your connection and try again.';
+      } else if (error.code === 'NETWORK_ERROR' || error.code === 'ECONNREFUSED') {
+        errorMessage = 'Cannot connect to server. Please ensure the backend is running.';
+      } else if (error.code === 'ETIMEDOUT') {
+        errorMessage = 'Upload timed out. Please try again with a smaller file.';
       }
 
       toast.error(errorMessage);

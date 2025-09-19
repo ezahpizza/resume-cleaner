@@ -12,9 +12,16 @@ module.exports = {
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
+  		backdropBlur: {
+  			xs: '2px',
+  		},
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
+  			glass: {
+  				DEFAULT: 'rgba(255, 255, 255, 0.25)',
+  				border: 'rgba(255, 255, 255, 0.18)',
+  			},
   			card: {
   				DEFAULT: 'hsl(var(--card))',
   				foreground: 'hsl(var(--card-foreground))'

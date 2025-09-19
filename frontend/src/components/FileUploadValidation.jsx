@@ -15,7 +15,9 @@ const FileUploadValidation = ({ file, onValidationComplete }) => {
   }, [file]);
 
   const validateFile = (file) => {
+    console.log('Validating file:', file.name, file.size, file.type);
     const validationResult = validateResumeFile(file);
+    console.log('Validation result:', validationResult);
     setValidation(validationResult);
     
     if (onValidationComplete) {
