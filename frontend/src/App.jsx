@@ -10,7 +10,7 @@ import LandingPage from './components/LandingPage';
 import Dashboard from './components/Dashboard';
 import AuthForm from './components/AuthForm';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = import.meta.env.VITE_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 // Axios interceptor for auth

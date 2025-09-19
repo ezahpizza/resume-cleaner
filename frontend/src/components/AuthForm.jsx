@@ -1,80 +1,28 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { FileText, Mail, Lock, User, ArrowLeft } from 'lucide-react';
-import { toast } from 'sonner';
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+import { useAuth } from '../hooks/useAuth';
 
 const AuthForm = ({ onLogin }) => {
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
-  });
+  const { loading, formData, updateFormData, login, register } = useAuth();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    updateFormData(name, value);
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
-
-    try {
-      const response = await axios.post(`${API}/auth/login`, {
-        email: formData.email,
-        password: formData.password
-      });
-
-      onLogin(response.data.access_token);
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Login failed');
-    } finally {
-      setLoading(false);
-    }
+    await login(onLogin);
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      toast.error('Password must be at least 6 characters long');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const response = await axios.post(`${API}/auth/register`, {
-        username: formData.username,
-        email: formData.email,
-        password: formData.password
-      });
-
-      toast.success('Account created successfully!');
-      onLogin(response.data.access_token);
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Registration failed');
-    } finally {
-      setLoading(false);
-    }
+    await register(onLogin);
   };
 
   return (

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
 import { CheckCircle, XCircle, AlertCircle, FileText, HardDrive } from 'lucide-react';
+import { validateResumeFile } from '../lib/fileValidation';
+import { formatFileSize, getProcessingTimeEstimate } from '../lib/formatters';
 
 const FileUploadValidation = ({ file, onValidationComplete }) => {
   const [validation, setValidation] = useState(null);
@@ -13,90 +15,7 @@ const FileUploadValidation = ({ file, onValidationComplete }) => {
   }, [file]);
 
   const validateFile = (file) => {
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    const allowedTypes = {
-      'application/pdf': { name: 'PDF', extension: '.pdf' },
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { 
-        name: 'DOCX', extension: '.docx' 
-      }
-    };
-
-    const issues = [];
-    const warnings = [];
-    let isValid = true;
-
-    // Check file type
-    if (!allowedTypes[file.type]) {
-      issues.push({
-        type: 'error',
-        message: `Unsupported file type: ${file.type}`,
-        detail: 'Only PDF and DOCX files are supported'
-      });
-      isValid = false;
-    }
-
-    // Check file extension
-    const extension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-    const expectedExtension = allowedTypes[file.type]?.extension;
-    if (expectedExtension && extension !== expectedExtension) {
-      issues.push({
-        type: 'error',
-        message: `File extension mismatch`,
-        detail: `Expected ${expectedExtension} but got ${extension}`
-      });
-      isValid = false;
-    }
-
-    // Check file size
-    if (file.size > maxSize) {
-      issues.push({
-        type: 'error',
-        message: `File too large: ${(file.size / 1024 / 1024).toFixed(1)}MB`,
-        detail: `Maximum allowed size is 10MB`
-      });
-      isValid = false;
-    }
-
-    // Check if file is empty
-    if (file.size === 0) {
-      issues.push({
-        type: 'error',
-        message: 'Empty file detected',
-        detail: 'The selected file appears to be empty'
-      });
-      isValid = false;
-    }
-
-    // Warnings for large files (but still valid)
-    if (file.size > 5 * 1024 * 1024 && file.size <= maxSize) {
-      warnings.push({
-        type: 'warning',
-        message: `Large file: ${(file.size / 1024 / 1024).toFixed(1)}MB`,
-        detail: 'Processing may take longer for large files'
-      });
-    }
-
-    // Warning for very long filenames
-    if (file.name.length > 100) {
-      warnings.push({
-        type: 'warning',
-        message: 'Long filename',
-        detail: 'Consider using a shorter filename for better compatibility'
-      });
-    }
-
-    const validationResult = {
-      isValid,
-      file: {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        typeInfo: allowedTypes[file.type]
-      },
-      issues,
-      warnings
-    };
-
+    const validationResult = validateResumeFile(file);
     setValidation(validationResult);
     
     if (onValidationComplete) {
@@ -104,13 +23,7 @@ const FileUploadValidation = ({ file, onValidationComplete }) => {
     }
   };
 
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  };
+
 
   if (!validation) return null;
 
@@ -197,8 +110,7 @@ const FileUploadValidation = ({ file, onValidationComplete }) => {
             <HardDrive className="w-3 h-3" />
             <span>
               Estimated processing time: {
-                validation.file.size > 5 * 1024 * 1024 ? '15-30 seconds' :
-                validation.file.size > 1 * 1024 * 1024 ? '5-15 seconds' : '2-5 seconds'
+                getProcessingTimeEstimate(validation.file.size)
               }
             </span>
           </div>

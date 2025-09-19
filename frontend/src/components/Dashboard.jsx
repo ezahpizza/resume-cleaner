@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
@@ -15,218 +14,63 @@ import {
   CheckCircle, 
   Clock,
   RefreshCw,
-  User
+  User,
+  XCircle
 } from 'lucide-react';
+import { useResume } from '../hooks/useResume';
+import { formatFileSize, formatDate } from '../lib/formatters';
 import { toast } from 'sonner';
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+import FileUploadValidation from './FileUploadValidation';
 
 const Dashboard = ({ user, onLogout }) => {
-  const [resumes, setResumes] = useState([]);
-  const [currentResume, setCurrentResume] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [uploadLoading, setUploadLoading] = useState(false);
-  const [cleaningLoading, setCleaningLoading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadedFileInfo, setUploadedFileInfo] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [validationResult, setValidationResult] = useState(null);
+  const {
+    resumes,
+    currentResume,
+    loading,
+    uploadLoading,
+    cleaningLoading,
+    uploadProgress,
+    uploadedFileInfo,
+    uploadResume,
+    cleanResume,
+    downloadResume,
+    viewResume,
+    fetchResumes,
+    setCurrentResume
+  } = useResume();
 
-  useEffect(() => {
-    fetchResumes();
-  }, []);
-
-  const fetchResumes = async () => {
-    try {
-      const response = await axios.get(`${API}/resume/list`);
-      setResumes(response.data);
-    } catch (error) {
-      toast.error('Failed to fetch resumes');
+  const handleFileSelect = (file) => {
+    if (file) {
+      setSelectedFile(file);
+      // Clear the file input so the same file can be selected again
+      const fileInput = document.getElementById('file-upload');
+      if (fileInput) {
+        fileInput.value = '';
+      }
     }
-  };
-
-  // Enhanced file validation
-  const validateFile = (file) => {
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    const allowedTypes = [
-      'application/pdf',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    ];
-    const allowedExtensions = ['.pdf', '.docx'];
-
-    // Check file type
-    if (!allowedTypes.includes(file.type)) {
-      return {
-        isValid: false,
-        error: 'Only PDF and DOCX files are supported. Please select a valid file.'
-      };
-    }
-
-    // Check file extension
-    const extension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-    if (!allowedExtensions.includes(extension)) {
-      return {
-        isValid: false,
-        error: `Invalid file extension: ${extension}. Only .pdf and .docx files are allowed.`
-      };
-    }
-
-    // Check file size
-    if (file.size > maxSize) {
-      return {
-        isValid: false,
-        error: `File size (${(file.size / 1024 / 1024).toFixed(1)}MB) exceeds the maximum limit of 10MB.`
-      };
-    }
-
-    // Check if file is empty
-    if (file.size === 0) {
-      return {
-        isValid: false,
-        error: 'The selected file is empty. Please choose a valid resume file.'
-      };
-    }
-
-    return { isValid: true };
   };
 
   const handleFileUpload = async (file) => {
     if (!file) return;
-
-    // Validate file
-    const validation = validateFile(file);
-    if (!validation.isValid) {
-      toast.error(validation.error);
-      return;
-    }
-
-    setUploadLoading(true);
-    setUploadProgress(0);
-    setUploadedFileInfo({
-      name: file.name,
-      size: file.size,
-      type: file.type
-    });
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const response = await axios.post(`${API}/resume/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          );
-          setUploadProgress(percentCompleted);
-        },
-      });
-
-      toast.success(
-        `Resume uploaded successfully! ${response.data.word_count} words extracted.`
-      );
-      
-      await fetchResumes();
-      
-      // Set the uploaded resume as current with enhanced data
-      const newResume = {
-        id: response.data.resume_id,
-        original_filename: file.name,
-        original_text: response.data.original_text,
-        cleaned_text: null,
-        file_size: response.data.file_size,
-        word_count: response.data.word_count,
-        character_count: response.data.character_count,
-        file_type: response.data.file_type
-      };
-      setCurrentResume(newResume);
-      
-      // Show file info toast
-      toast.success(
-        `Processing complete: ${response.data.word_count} words, ${response.data.character_count} characters extracted`
-      );
-      
-    } catch (error) {
-      console.error('Upload error:', error);
-      
-      // Enhanced error handling
-      let errorMessage = 'Upload failed. Please try again.';
-      
-      if (error.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
-      } else if (error.response?.status === 413) {
-        errorMessage = 'File too large. Please choose a file smaller than 10MB.';
-      } else if (error.response?.status === 415) {
-        errorMessage = 'Unsupported file type. Please upload a PDF or DOCX file.';
-      } else if (error.response?.status === 409) {
-        errorMessage = 'This resume has already been uploaded. Please select a different file.';
-      } else if (error.code === 'NETWORK_ERROR') {
-        errorMessage = 'Network error. Please check your connection and try again.';
-      }
-      
-      toast.error(errorMessage);
-    } finally {
-      setUploadLoading(false);
-      setUploadProgress(0);
-      setUploadedFileInfo(null);
-    }
+    await uploadResume(file);
+    // Clear selection after upload
+    setSelectedFile(null);
+    setValidationResult(null);
   };
 
   const handleCleanResume = async (resumeId) => {
-    setCleaningLoading(true);
-    try {
-      const response = await axios.post(`${API}/resume/clean`, {
-        resume_id: resumeId
-      });
-
-      toast.success('Resume cleaned successfully!');
-      
-      // Update current resume with cleaned text
-      if (currentResume && currentResume.id === resumeId) {
-        setCurrentResume(prev => ({
-          ...prev,
-          cleaned_text: response.data.cleaned_text
-        }));
-      }
-      
-      await fetchResumes();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Cleaning failed');
-    } finally {
-      setCleaningLoading(false);
-    }
+    await cleanResume(resumeId);
   };
 
   const handleDownload = async (resumeId, filename) => {
-    try {
-      const response = await axios.get(`${API}/resume/${resumeId}/download`, {
-        responseType: 'blob'
-      });
-
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `cleaned_${filename}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      
-      toast.success('Resume downloaded successfully!');
-    } catch (error) {
-      toast.error('Download failed');
-    }
+    await downloadResume(resumeId, filename);
   };
 
   const handleViewResume = async (resumeId) => {
-    try {
-      const response = await axios.get(`${API}/resume/${resumeId}`);
-      setCurrentResume(response.data);
-    } catch (error) {
-      toast.error('Failed to load resume');
-    }
+    await viewResume(resumeId);
   };
 
   // Enhanced drag and drop handlers
@@ -268,26 +112,10 @@ const Dashboard = ({ user, onLogout }) => {
       return;
     }
     
-    handleFileUpload(files[0]);
+    handleFileSelect(files[0]);
   };
 
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -393,7 +221,7 @@ const Dashboard = ({ user, onLogout }) => {
                       <input
                         type="file"
                         accept=".pdf,.docx"
-                        onChange={(e) => handleFileUpload(e.target.files[0])}
+                        onChange={(e) => handleFileSelect(e.target.files[0])}
                         className="hidden"
                         id="file-upload"
                         disabled={uploadLoading}
@@ -410,6 +238,51 @@ const Dashboard = ({ user, onLogout }) => {
                         <p>Supports PDF and DOCX files up to 10MB</p>
                         <p>✓ Secure processing • ✓ No content stored permanently</p>
                       </div>
+                      
+                      {/* File Validation */}
+                      {selectedFile && (
+                        <div className="mt-6">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="text-sm font-medium text-gray-700">Selected File</h4>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedFile(null);
+                                setValidationResult(null);
+                              }}
+                              className="text-gray-400 hover:text-gray-600 p-1 h-auto"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <FileUploadValidation 
+                            file={selectedFile} 
+                            onValidationComplete={setValidationResult}
+                          />
+                          {validationResult?.isValid && (
+                            <div className="mt-4">
+                              <Button
+                                onClick={() => handleFileUpload(selectedFile)}
+                                disabled={uploadLoading}
+                                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                {uploadLoading ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                    Uploading...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload className="w-4 h-4 mr-2" />
+                                    Upload Resume
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
