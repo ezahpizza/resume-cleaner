@@ -13,11 +13,6 @@ class Config:
     MONGO_URL: str = os.environ.get('MONGO_URL', '')
     DB_NAME: str = os.environ.get('DB_NAME', 'resume_cleaner')
 
-    # JWT settings
-    SECRET_KEY: str = os.environ.get("SECRET_KEY", "your-secret-key-here")
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-
     # Google AI settings
     GOOGLE_AI_API_KEY: str = os.environ.get("GOOGLE_AI_API_KEY", "")
 

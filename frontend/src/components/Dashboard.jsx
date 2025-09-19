@@ -9,12 +9,10 @@ import {
   Download, 
   Eye, 
   Trash2, 
-  LogOut, 
   Zap, 
   CheckCircle, 
   Clock,
   RefreshCw,
-  User,
   XCircle
 } from 'lucide-react';
 import { useResume } from '../hooks/useResume';
@@ -22,7 +20,7 @@ import { formatFileSize, formatDate } from '../lib/formatters';
 import { toast } from 'sonner';
 import FileUploadValidation from './FileUploadValidation';
 
-const Dashboard = ({ user, onLogout }) => {
+const Dashboard = () => {
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [validationResult, setValidationResult] = useState(null);
@@ -133,19 +131,9 @@ const Dashboard = ({ user, onLogout }) => {
             </div>
             
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 text-gray-700">
-                <User className="w-4 h-4" />
-                <span className="font-medium">{user?.username}</span>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onLogout}
-                className="flex items-center space-x-2 border-gray-300 hover:border-red-400 hover:text-red-600"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Logout</span>
-              </Button>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                Resume Cleaner
+              </h1>
             </div>
           </div>
         </div>

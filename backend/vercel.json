@@ -1,0 +1,19 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/auth/:path*",
+      "destination": "/api/health"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/auth/:path*",
+      "headers": [
+        {
+          "key": "X-Auth-Removed",
+          "value": "true"
+        }
+      ]
+    }
+  ]
+}

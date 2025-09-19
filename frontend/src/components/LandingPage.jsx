@@ -50,7 +50,7 @@ const LandingPage = () => {
                 Resume Cleaner
               </h1>
             </div>
-            <Link to="/auth">
+            <Link to="/dashboard">
               <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-6 py-2 rounded-full transition-all duration-200 hover:scale-105 shadow-lg">
                 Get Started
               </Button>
@@ -74,7 +74,7 @@ const LandingPage = () => {
               while preserving your unique voice and formatting. Get job-ready in seconds.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/auth">
+              <Link to="/dashboard">
                 <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold px-8 py-4 rounded-full text-lg transition-all duration-200 hover:scale-105 shadow-xl">
                   Start Cleaning Now
                 </Button>
@@ -174,7 +174,7 @@ const LandingPage = () => {
                   </div>
                 ))}
               </div>
-              <Link to="/auth" className="inline-block mt-8">
+              <Link to="/dashboard" className="inline-block mt-8">
                 <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-8 py-4 rounded-full text-lg transition-all duration-200 hover:scale-105 shadow-lg">
                   Get Started Today
                 </Button>
@@ -221,7 +221,7 @@ const LandingPage = () => {
           <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
             Join thousands of job seekers who have successfully polished their resumes with our AI technology.
           </p>
-          <Link to="/auth">
+          <Link to="/dashboard">
             <Button className="bg-white text-blue-600 hover:bg-gray-50 font-bold px-8 py-4 rounded-full text-lg transition-all duration-200 hover:scale-105 shadow-xl">
               Start Your Free Account
             </Button>

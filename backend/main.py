@@ -5,7 +5,6 @@ import logging
 
 from config import config
 from database import db
-from routes.auth import router as auth_router
 from routes.resume import router as resume_router
 
 # Configure logging
@@ -41,7 +40,6 @@ from fastapi import APIRouter
 api_router = APIRouter(prefix="/api")
 
 # Include route modules
-api_router.include_router(auth_router)
 api_router.include_router(resume_router)
 
 # Include the router in the main app
@@ -51,7 +49,7 @@ app.include_router(api_router)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=config.CORS_ORIGINS.split(','),
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )

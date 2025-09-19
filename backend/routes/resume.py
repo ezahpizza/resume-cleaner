@@ -1,8 +1,7 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
+from fastapi import APIRouter, HTTPException, UploadFile, File
 from fastapi.responses import FileResponse
 from datetime import datetime, timezone
-from models import Resume, ResumeCleanRequest, FileUploadResponse, User
-from auth import get_current_user
+from models import Resume, ResumeCleanRequest, FileUploadResponse
 from database import db
 from file_processing import validate_uploaded_file, extract_text_from_file, create_pdf_from_text
 from ai_service import ai_service
@@ -14,8 +13,7 @@ logger = logging.getLogger(__name__)
 
 @router.post("/resume/upload", response_model=FileUploadResponse)
 async def upload_resume(
-    file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user)
+    file: UploadFile = File(...)
 ):
     """Enhanced resume upload with comprehensive validation and processing"""
 
@@ -51,21 +49,9 @@ async def upload_resume(
                 detail="The extracted text is too short. Please ensure your resume contains sufficient content."
             )
 
-        # Check for existing resume with same content
-        existing_resume = await db.get_collection("resumes").find_one({
-            "user_id": current_user.id,
-            "original_text": extracted_text
-        })
-
-        if existing_resume:
-            raise HTTPException(
-                status_code=409,
-                detail="A resume with identical content already exists. Please upload a different file."
-            )
-
-        # Create enhanced resume record
+        # Create enhanced resume record (no user_id needed)
         resume = Resume(
-            user_id=current_user.id,
+            user_id="",  # Empty user_id since no auth
             original_filename=file.filename,
             original_text=extracted_text
         )
@@ -81,7 +67,7 @@ async def upload_resume(
 
         await db.get_collection("resumes").insert_one(resume_doc)
 
-        logger.info(f"Resume uploaded successfully - User: {current_user.email}, File: {file.filename}, Size: {actual_file_size} bytes")
+        logger.info(f"Resume uploaded successfully - File: {file.filename}, Size: {actual_file_size} bytes")
 
         return FileUploadResponse(
             message="Resume uploaded and processed successfully",
@@ -97,17 +83,16 @@ async def upload_resume(
         # Re-raise HTTP exceptions as-is
         raise
     except Exception as e:
-        logger.error(f"Unexpected error during file upload - User: {current_user.email}, Error: {str(e)}")
+        logger.error(f"Unexpected error during file upload - Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred while processing your file: {str(e)}")
 
 @router.post("/resume/clean")
 async def clean_resume(
-    request: ResumeCleanRequest,
-    current_user: User = Depends(get_current_user)
+    request: ResumeCleanRequest
 ):
     """Clean resume using AI"""
     # Get resume from database
-    resume_doc = await db.get_collection("resumes").find_one({"id": request.resume_id, "user_id": current_user.id})
+    resume_doc = await db.get_collection("resumes").find_one({"id": request.resume_id})
     if not resume_doc:
         raise HTTPException(status_code=404, detail="Resume not found")
 
@@ -135,18 +120,17 @@ async def clean_resume(
         raise HTTPException(status_code=500, detail=f"Error cleaning resume: {str(e)}")
 
 @router.get("/resume/list")
-async def list_resumes(current_user: User = Depends(get_current_user)):
-    """List all resumes for current user"""
-    resumes_docs = await db.get_collection("resumes").find({"user_id": current_user.id}).to_list(100)
+async def list_resumes():
+    """List all resumes"""
+    resumes_docs = await db.get_collection("resumes").find().to_list(100)
     return [Resume(**resume_doc) for resume_doc in resumes_docs]
 
 @router.get("/resume/{resume_id}")
 async def get_resume(
-    resume_id: str,
-    current_user: User = Depends(get_current_user)
+    resume_id: str
 ):
     """Get a specific resume"""
-    resume_doc = await db.get_collection("resumes").find_one({"id": resume_id, "user_id": current_user.id})
+    resume_doc = await db.get_collection("resumes").find_one({"id": resume_id})
     if not resume_doc:
         raise HTTPException(status_code=404, detail="Resume not found")
 
@@ -154,11 +138,10 @@ async def get_resume(
 
 @router.get("/resume/{resume_id}/download")
 async def download_resume(
-    resume_id: str,
-    current_user: User = Depends(get_current_user)
+    resume_id: str
 ):
     """Download cleaned resume as PDF"""
-    resume_doc = await db.get_collection("resumes").find_one({"id": resume_id, "user_id": current_user.id})
+    resume_doc = await db.get_collection("resumes").find_one({"id": resume_id})
     if not resume_doc:
         raise HTTPException(status_code=404, detail="Resume not found")
 
